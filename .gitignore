@@ -1,0 +1,27 @@
+# Entorno
+.env
+.env.local
+
+# .NET
+bin/
+obj/
+TestResults/
+*.user
+.vs/
+*.db
+*.db-shm
+*.db-wal
+
+# Node
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# Editores / SO
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db

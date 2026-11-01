@@ -1,0 +1,49 @@
+# Levanta el sistema completo: PostgreSQL + API .NET + frontend (nginx).
+#   cp .env.example .env && docker compose up -d --build
+# Web:     http://localhost:8080
+# Swagger: http://localhost:5080/swagger
+name: punto-de-venta
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-punto_venta}
+      POSTGRES_USER: ${POSTGRES_USER:-pos}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Default: Host=db;Port=5432;Database=${POSTGRES_DB:-punto_venta};Username=${POSTGRES_USER:-pos};Password=${POSTGRES_PASSWORD}
+      Database__Provider: Postgres
+      Database__SeedDemoData: ${SEED_DEMO_DATA:-true}
+      Jwt__Key: ${JWT_KEY:?Defina JWT_KEY en .env (mínimo 32 caracteres)}
+      Jwt__ExpirationMinutes: ${JWT_EXPIRATION_MINUTES:-480}
+      Swagger__Enabled: ${SWAGGER_ENABLED:-true}
+    ports:
+      - "${API_PORT:-5080}:8080"
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+
+volumes:
+  pgdata:

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (.NET 10)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restaurar
+        run: dotnet restore PuntoVenta.sln
+      - name: Verificar formato
+        run: dotnet format PuntoVenta.sln --verify-no-changes --no-restore --severity error
+      - name: Compilar
+        run: dotnet build PuntoVenta.sln -c Release --no-restore
+      - name: Pruebas (unitarias + integración con SQLite en memoria)
+        run: dotnet test PuntoVenta.sln -c Release --no-build --logger "trx;LogFileName=resultados.trx"
+      - name: Publicar
+        run: dotnet publish src/PuntoVenta.Api/PuntoVenta.Api.csproj -c Release --no-build -o out
+
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
